@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Job Report Pro - Auto Sync</title>
+    <title>Job Report Pro - Fixed & Auto Sync</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -15,6 +15,8 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .syncing { animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        .job-active { border-color: #4f46e5 !important; background-color: #eef2ff !important; color: #4338ca !important; }
+        .job-inactive { border-color: #f1f5f9 !important; background-color: #f8fafc !important; color: #94a3b8 !important; }
     </style>
 </head>
 <body>
@@ -41,24 +43,24 @@
                 </div>
             </header>
 
-            <!-- Settings Panel (Cài đặt 1 lần) -->
+            <!-- Settings Panel -->
             <div id="settings-panel" class="hidden bg-white p-6 rounded-3xl shadow-md border border-slate-200 space-y-4 fade-in">
                 <div class="flex items-center justify-between">
-                    <h3 class="font-bold text-slate-800">Cấu hình đồng bộ tự động</h3>
+                    <h3 class="font-bold text-slate-800">Cấu hình đồng bộ</h3>
                     <button id="close-settings" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
                 </div>
                 <div class="space-y-4">
                     <div>
-                        <label class="text-xs font-bold text-slate-500 block mb-1 uppercase">Google Web App URL (Dán vào đây để tự động hóa)</label>
+                        <label class="text-xs font-bold text-slate-500 block mb-1 uppercase">Google Web App URL</label>
                         <input id="input-sync-url" type="text" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500">
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="text-xs font-bold text-slate-500 block mb-1 uppercase">Chive Max (Tuần)</label>
+                            <label class="text-xs font-bold text-slate-500 block mb-1 uppercase">Chive Max (Giờ)</label>
                             <input id="input-chive-limit" type="number" class="w-full px-4 py-2 text-sm border border-slate-200 rounded-xl outline-none">
                         </div>
                         <div>
-                            <label class="text-xs font-bold text-slate-500 block mb-1 uppercase">Audit Max (Tuần)</label>
+                            <label class="text-xs font-bold text-slate-500 block mb-1 uppercase">Audit Max (Giờ)</label>
                             <input id="input-audit-limit" type="number" class="w-full px-4 py-2 text-sm border border-slate-200 rounded-xl outline-none">
                         </div>
                     </div>
@@ -130,11 +132,11 @@
                             <div>
                                 <label class="block text-sm font-semibold text-slate-700 mb-2">Chọn Job</label>
                                 <div class="grid grid-cols-2 gap-2">
-                                    <button id="btn-job-gdo" class="job-btn py-3 px-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-1 border-indigo-600 bg-indigo-50 text-indigo-700">
+                                    <button id="btn-job-gdo" class="job-btn py-3 px-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-1">
                                         <span class="font-bold">GDO</span>
                                         <span class="text-[10px] uppercase opacity-70">$3.6/h</span>
                                     </button>
-                                    <button id="btn-job-chive" class="job-btn py-3 px-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-1 border-slate-100 bg-slate-50 text-slate-500">
+                                    <button id="btn-job-chive" class="job-btn py-3 px-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-1">
                                         <span class="font-bold">Chive</span>
                                         <span class="text-[10px] uppercase opacity-70">$2.0/h</span>
                                     </button>
@@ -143,8 +145,8 @@
                             <div id="queue-section" class="hidden space-y-2">
                                 <label class="block text-sm font-semibold text-slate-700">Chọn Queue</label>
                                 <div class="grid grid-cols-2 gap-2">
-                                    <button id="btn-queue-chive" class="queue-btn py-2 px-3 rounded-xl border transition-all text-sm font-medium border-indigo-400 bg-indigo-50 text-indigo-700">Chive</button>
-                                    <button id="btn-queue-audit" class="queue-btn py-2 px-3 rounded-xl border transition-all text-sm font-medium border-slate-200 bg-white text-slate-500">Audit</button>
+                                    <button id="btn-queue-chive" class="queue-btn py-2 px-3 rounded-xl border transition-all text-sm font-medium">Chive</button>
+                                    <button id="btn-queue-audit" class="queue-btn py-2 px-3 rounded-xl border transition-all text-sm font-medium">Audit</button>
                                 </div>
                             </div>
                             <div>
@@ -217,7 +219,11 @@
             settingsPanel: document.getElementById('settings-panel'),
             queueSection: document.getElementById('queue-section'),
             cloudStatus: document.getElementById('cloud-status'),
-            statusText: document.getElementById('status-text')
+            statusText: document.getElementById('status-text'),
+            btnGdo: document.getElementById('btn-job-gdo'),
+            btnChive: document.getElementById('btn-job-chive'),
+            btnQChive: document.getElementById('btn-queue-chive'),
+            btnQAudit: document.getElementById('btn-queue-audit')
         };
 
         function init() {
@@ -239,13 +245,8 @@
             render();
             lucide.createIcons();
             
-            // Tự động đồng bộ ngay khi mở app
-            if (state.syncUrl) {
-                updateCloudStatus('syncing', 'Đang kết nối Cloud...');
-                syncFromCloud();
-            }
+            if (state.syncUrl) syncFromCloud();
 
-            // Tự động kiểm tra dữ liệu mới mỗi 60 giây
             setInterval(() => {
                 if (state.syncUrl && !state.isSyncing) syncFromCloud();
             }, 60000);
@@ -288,7 +289,6 @@
                 updateCloudStatus('success', 'Đã lưu lên Cloud');
             } catch (e) { 
                 updateCloudStatus('error', 'Lỗi lưu Cloud');
-                console.error("Sync failed", e); 
             }
             state.isSyncing = false;
         }
@@ -308,12 +308,12 @@
                 }
             } catch (e) { 
                 updateCloudStatus('error', 'Lỗi tải Cloud');
-                console.error("Fetch failed", e); 
             }
             state.isSyncing = false;
         }
 
         function render() {
+            // Update Stats
             const today = new Date().toISOString().split('T')[0];
             const todayReports = state.reports.filter(r => r.date.startsWith(today));
             const gdoUsd = todayReports.filter(r => r.jobType === 'GDO').reduce((s, r) => s + r.totalUsd, 0);
@@ -325,6 +325,7 @@
             els.chiveUsd.innerText = `$${chiveUsd.toFixed(2)}`;
             els.chiveVnd.innerText = `≈ ${(chiveUsd * state.exchangeRate).toLocaleString('vi-VN')} đ`;
 
+            // Update Progress
             const startOfWeek = new Date();
             startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + (startOfWeek.getDay() === 0 ? -6 : 1));
             startOfWeek.setHours(0,0,0,0);
@@ -340,6 +341,19 @@
             els.auditProgressBar.style.width = `${Math.min((auHrs/state.auditLimit)*100, 100)}%`;
             els.auditProgressBar.className = `h-full rounded-full transition-all ${auHrs >= state.auditLimit ? 'bg-red-500' : 'bg-purple-500'}`;
 
+            // Update Form Button Styles
+            els.btnGdo.className = `job-btn py-3 px-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-1 ${state.jobType === 'GDO' ? 'job-active' : 'job-inactive'}`;
+            els.btnChive.className = `job-btn py-3 px-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-1 ${state.jobType === 'Chive' ? 'job-active' : 'job-inactive'}`;
+            
+            if (state.jobType === 'Chive') {
+                els.queueSection.classList.remove('hidden');
+                els.btnQChive.className = `queue-btn py-2 px-3 rounded-xl border transition-all text-sm font-medium ${state.queue === 'Chive' ? 'border-indigo-400 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-500'}`;
+                els.btnQAudit.className = `queue-btn py-2 px-3 rounded-xl border transition-all text-sm font-medium ${state.queue === 'Audit' ? 'border-indigo-400 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-500'}`;
+            } else {
+                els.queueSection.classList.add('hidden');
+            }
+
+            // Update List
             els.recordCount.innerText = `${state.reports.length} bản ghi`;
             els.footerInfo.innerText = `© 2026 Job Report Pro • Tỷ giá cập nhật ${state.lastRateUpdate}: ${state.exchangeRate.toLocaleString()} VNĐ`;
 
@@ -361,16 +375,26 @@
                                 </div>
                             </div>
                         </div>
-                        <button onclick="deleteReport('${r.id}')" class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        <button onclick="window.deleteReport('${r.id}')" class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                     </div>
                 `).join('');
             lucide.createIcons();
         }
 
-        document.getElementById('btn-job-gdo').onclick = () => { state.jobType = 'GDO'; state.queue = 'None'; els.queueSection.classList.add('hidden'); render(); };
-        document.getElementById('btn-job-chive').onclick = () => { state.jobType = 'Chive'; state.queue = 'Chive'; els.queueSection.classList.remove('hidden'); render(); };
-        document.getElementById('btn-queue-chive').onclick = () => { state.queue = 'Chive'; render(); };
-        document.getElementById('btn-queue-audit').onclick = () => { state.queue = 'Audit'; render(); };
+        // Global Delete Function
+        window.deleteReport = (id) => {
+            if (confirm("Xóa báo cáo này?")) {
+                state.reports = state.reports.filter(r => r.id !== id);
+                localStorage.setItem('job_reports', JSON.stringify(state.reports));
+                render();
+                syncToCloud();
+            }
+        };
+
+        els.btnGdo.onclick = () => { state.jobType = 'GDO'; state.queue = 'None'; render(); };
+        els.btnChive.onclick = () => { state.jobType = 'Chive'; state.queue = 'Chive'; render(); };
+        els.btnQChive.onclick = () => { state.queue = 'Chive'; render(); };
+        els.btnQAudit.onclick = () => { state.queue = 'Audit'; render(); };
 
         document.getElementById('btn-submit').onclick = async () => {
             const h = parseFloat(els.inputHours.value);
@@ -380,16 +404,7 @@
             localStorage.setItem('job_reports', JSON.stringify(state.reports));
             els.inputHours.value = ''; els.inputDesc.value = '';
             render();
-            syncToCloud(); // Tự động đẩy lên Cloud ngay khi thêm
-        };
-
-        window.deleteReport = (id) => {
-            if (confirm("Xóa báo cáo này?")) {
-                state.reports = state.reports.filter(r => r.id !== id);
-                localStorage.setItem('job_reports', JSON.stringify(state.reports));
-                render();
-                syncToCloud(); // Tự động đẩy lên Cloud ngay khi xóa
-            }
+            syncToCloud();
         };
 
         document.getElementById('toggle-settings').onclick = () => els.settingsPanel.classList.toggle('hidden');
