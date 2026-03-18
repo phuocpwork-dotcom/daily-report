@@ -188,7 +188,7 @@
             lastRateUpdate: '18/03/2026',
             chiveLimit: 20,
             auditLimit: 15,
-            syncUrl: ''
+            syncUrl: 'https://script.google.com/macros/s/AKfycbxw-vX9A7aV5l3uSb5QTXUqrZzA1wdhHxqQ0o335IlUABGquvzi3qGx78eHj2AF5OvWiA/exec'
         };
 
         const els = {
@@ -372,7 +372,8 @@
 
         els.inputChiveLimit.oninput = (e) => { state.chiveLimit = parseFloat(e.target.value) || 20; localStorage.setItem('job_limits', JSON.stringify({ chive: state.chiveLimit, audit: state.auditLimit })); render(); };
         els.inputAuditLimit.oninput = (e) => { state.auditLimit = parseFloat(e.target.value) || 15; localStorage.setItem('job_limits', JSON.stringify({ chive: state.chiveLimit, audit: state.auditLimit })); render(); };
-
+	
+	syncFromCloud();
         init();
     </script>
 </body>
