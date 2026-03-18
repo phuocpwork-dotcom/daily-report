@@ -122,6 +122,9 @@
                         <span id="goal-status" class="text-[9px] sm:text-[10px] font-bold text-slate-700">$0 / $10</span>
                     </div>
                 </div>
+                <a id="btn-open-sheet" href="#" target="_blank" class="p-3.5 bg-white hover:bg-slate-50 rounded-2xl shadow-sm border border-slate-200 transition-all active:scale-90 text-slate-400 flex items-center justify-center" title="Mở Sheet Báo Cáo">
+                    <i data-lucide="external-link" class="w-6 h-6"></i>
+                </a>
                 <button id="toggle-settings" class="p-3.5 bg-white hover:bg-slate-50 rounded-2xl shadow-sm border border-slate-200 transition-all active:scale-90 text-slate-400">
                     <i data-lucide="settings-2" class="w-6 h-6"></i>
                 </button>
@@ -145,6 +148,10 @@
                     <div>
                         <label class="text-[11px] font-extrabold text-slate-400 block mb-2 uppercase tracking-wider">Audit Max (Giờ/Tuần)</label>
                         <input id="input-audit-limit" type="number" class="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-extrabold text-slate-400 block mb-2 uppercase tracking-wider">URL Sheet Báo Cáo</label>
+                        <input id="input-sheet-url" type="url" placeholder="https://docs.google.com/spreadsheets/d/..." class="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
                     </div>
                 </div>
                 <div class="bg-indigo-600/5 p-6 rounded-3xl border border-indigo-100 flex flex-col justify-center">
@@ -321,6 +328,7 @@
             lastRateUpdate: '18/03/2026',
             chiveLimit: 20,
             auditLimit: 15,
+            sheetUrl: '',
             isSyncing: false,
             lastDate: new Date().getDate()
         };
@@ -343,6 +351,8 @@
             inputDesc: document.getElementById('input-desc'),
             inputChiveLimit: document.getElementById('input-chive-limit'),
             inputAuditLimit: document.getElementById('input-audit-limit'),
+            inputSheetUrl: document.getElementById('input-sheet-url'),
+            btnOpenSheet: document.getElementById('btn-open-sheet'),
             settingsPanel: document.getElementById('settings-panel'),
             queueSection: document.getElementById('queue-section'),
             cloudStatus: document.getElementById('cloud-status'),
@@ -356,13 +366,15 @@
 
         function init() {
             state.reports = JSON.parse(localStorage.getItem('job_reports') || '[]');
-            const limits = JSON.parse(localStorage.getItem('job_limits') || '{}');
-            state.chiveLimit = limits.chive || 20;
-            state.auditLimit = limits.audit || 15;
+            const settings = JSON.parse(localStorage.getItem('job_settings') || localStorage.getItem('job_limits') || '{}');
+            state.chiveLimit = settings.chive || 20;
+            state.auditLimit = settings.audit || 15;
+            state.sheetUrl = settings.sheetUrl || '';
             
             els.inputChiveLimit.value = state.chiveLimit;
             els.inputAuditLimit.value = state.auditLimit;
-            els.cloudUrlInfo.innerText = CLOUD_URL || "Chưa cấu hình URL trong Code";
+            els.inputSheetUrl.value = state.sheetUrl;
+            els.cloudUrlInfo.innerText = CLOUD_URL ? "Apps Script: OK" : "Chưa cấu hình Apps Script";
             
             updateDateDisplay();
             render();
@@ -486,6 +498,15 @@
             els.recordCount.innerText = `${state.reports.length} Items`;
             els.footerInfo.innerText = `© 2026 Job Report Pro • Tỷ giá: ${state.exchangeRate.toLocaleString()} VNĐ`;
 
+            // Cập nhật link mở Sheet
+            if (state.sheetUrl) {
+                els.btnOpenSheet.href = state.sheetUrl;
+                els.btnOpenSheet.classList.remove('opacity-20', 'pointer-events-none');
+            } else {
+                els.btnOpenSheet.href = '#';
+                els.btnOpenSheet.classList.add('opacity-20', 'pointer-events-none');
+            }
+
             // Update Daily Goal
             const dailyGoal = 10; // Mục tiêu $10 mỗi ngày
             const percent = Math.min((totalToday / dailyGoal) * 100, 100);
@@ -578,8 +599,17 @@
         document.getElementById('toggle-settings').onclick = () => els.settingsPanel.classList.toggle('hidden');
         document.getElementById('close-settings').onclick = () => els.settingsPanel.classList.add('hidden');
         
-        els.inputChiveLimit.oninput = (e) => { state.chiveLimit = parseFloat(e.target.value) || 20; localStorage.setItem('job_limits', JSON.stringify({ chive: state.chiveLimit, audit: state.auditLimit })); render(); };
-        els.inputAuditLimit.oninput = (e) => { state.auditLimit = parseFloat(e.target.value) || 15; localStorage.setItem('job_limits', JSON.stringify({ chive: state.chiveLimit, audit: state.auditLimit })); render(); };
+        const saveSettings = () => {
+            localStorage.setItem('job_settings', JSON.stringify({
+                chive: state.chiveLimit,
+                audit: state.auditLimit,
+                sheetUrl: state.sheetUrl
+            }));
+        };
+
+        els.inputChiveLimit.oninput = (e) => { state.chiveLimit = parseFloat(e.target.value) || 20; saveSettings(); render(); };
+        els.inputAuditLimit.oninput = (e) => { state.auditLimit = parseFloat(e.target.value) || 15; saveSettings(); render(); };
+        els.inputSheetUrl.oninput = (e) => { state.sheetUrl = e.target.value; saveSettings(); render(); };
 
         document.getElementById('btn-clear-data').onclick = () => {
             if (confirm("Xóa TOÀN BỘ dữ liệu?")) {
