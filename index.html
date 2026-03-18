@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Job Report Pro - Ultimate Sync</title>
+    <title>Job Report Pro - Zero Touch Sync</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -28,14 +28,14 @@
                 <div>
                     <h1 class="text-3xl font-bold tracking-tight text-slate-900">Job Report Pro</h1>
                     <div class="flex items-center gap-2 mt-1">
-                        <div id="cloud-status" class="w-2 h-2 rounded-full bg-slate-300"></div>
-                        <p id="status-text" class="text-slate-500 text-xs font-medium uppercase tracking-wider">Chưa kết nối Cloud</p>
+                        <div id="cloud-status" class="w-2.5 h-2.5 rounded-full bg-slate-300"></div>
+                        <p id="status-text" class="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Đang khởi tạo...</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
                     <div class="bg-white px-4 py-2 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-2">
                         <i data-lucide="calendar" class="w-4 h-4 text-indigo-600"></i>
-                        <span id="current-date" class="text-sm font-medium text-slate-700">...</span>
+                        <span id="current-date" class="text-sm font-bold text-slate-700">...</span>
                     </div>
                     <button id="toggle-settings" class="p-2.5 bg-white hover:bg-slate-50 rounded-2xl shadow-sm border border-slate-200 transition-all text-slate-400">
                         <i data-lucide="settings" class="w-5 h-5"></i>
@@ -44,28 +44,26 @@
             </header>
 
             <!-- Settings Panel -->
-            <div id="settings-panel" class="hidden bg-white p-6 rounded-3xl shadow-md border border-slate-200 space-y-4 fade-in">
-                <div class="flex items-center justify-between">
-                    <h3 class="font-bold text-slate-800">Cấu hình đồng bộ</h3>
+            <div id="settings-panel" class="hidden bg-white p-6 rounded-3xl shadow-xl border border-slate-200 space-y-4 fade-in">
+                <div class="flex items-center justify-between border-b pb-4">
+                    <h3 class="font-bold text-slate-800">Cấu hình hệ thống</h3>
                     <button id="close-settings" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
                 </div>
-                <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="text-xs font-bold text-slate-500 block mb-1 uppercase">Google Web App URL</label>
-                        <input id="input-sync-url" type="text" placeholder="Dán URL Apps Script vào đây..." class="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 outline-none">
+                        <label class="text-[10px] font-bold text-slate-400 block mb-1 uppercase">Chive Max (Giờ)</label>
+                        <input id="input-chive-limit" type="number" class="w-full px-4 py-2 text-sm border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="text-xs font-bold text-slate-500 block mb-1 uppercase">Chive Max (Giờ)</label>
-                            <input id="input-chive-limit" type="number" class="w-full px-4 py-2 text-sm border border-slate-200 rounded-xl outline-none">
-                        </div>
-                        <div>
-                            <label class="text-xs font-bold text-slate-500 block mb-1 uppercase">Audit Max (Giờ)</label>
-                            <input id="input-audit-limit" type="number" class="w-full px-4 py-2 text-sm border border-slate-200 rounded-xl outline-none">
-                        </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 block mb-1 uppercase">Audit Max (Giờ)</label>
+                        <input id="input-audit-limit" type="number" class="w-full px-4 py-2 text-sm border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
                     </div>
-                    <button id="btn-clear-data" class="w-full py-3 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold uppercase rounded-xl transition-colors">Xóa toàn bộ dữ liệu</button>
                 </div>
+                <div class="p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
+                    <p class="text-[10px] text-indigo-600 font-bold uppercase mb-1">Trạng thái Cloud</p>
+                    <p id="cloud-url-info" class="text-xs text-indigo-900 break-all font-medium">Chưa cấu hình URL trong Code</p>
+                </div>
+                <button id="btn-clear-data" class="w-full py-3 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold uppercase rounded-xl transition-colors">Xóa toàn bộ dữ liệu</button>
             </div>
 
             <!-- Stats Grid -->
@@ -178,14 +176,19 @@
                 </div>
             </div>
 
-            <footer class="pt-8 pb-4 text-center text-slate-400 text-xs font-medium">
+            <footer class="pt-8 pb-4 text-center text-slate-400 text-[10px] font-bold uppercase tracking-widest">
                 <p id="footer-info">© 2026 Job Report Pro • Tỷ giá: 26,320 VNĐ</p>
             </footer>
         </div>
     </div>
 
     <script>
-        // Global State
+        // ==========================================
+        // DÁN URL GOOGLE APPS SCRIPT CỦA BẠN VÀO ĐÂY
+        // ==========================================
+        const CLOUD_URL = 'https://script.google.com/macros/s/AKfycbyMCZwqIw7BQhhIVDAzkZYyWikqDcirpvU4lgcSgwkFs1gS6fOaskgDIYSf1EAzP1PFXQ/exec'; 
+        // ==========================================
+
         let state = {
             reports: [],
             jobType: 'GDO',
@@ -194,7 +197,6 @@
             lastRateUpdate: '18/03/2026',
             chiveLimit: 20,
             auditLimit: 15,
-            syncUrl: '',
             isSyncing: false,
             lastDate: new Date().getDate()
         };
@@ -217,52 +219,53 @@
             inputDesc: document.getElementById('input-desc'),
             inputChiveLimit: document.getElementById('input-chive-limit'),
             inputAuditLimit: document.getElementById('input-audit-limit'),
-            inputSyncUrl: document.getElementById('input-sync-url'),
             settingsPanel: document.getElementById('settings-panel'),
             queueSection: document.getElementById('queue-section'),
             cloudStatus: document.getElementById('cloud-status'),
             statusText: document.getElementById('status-text'),
+            cloudUrlInfo: document.getElementById('cloud-url-info'),
             btnGdo: document.getElementById('btn-job-gdo'),
             btnChive: document.getElementById('btn-job-chive'),
             btnQChive: document.getElementById('btn-queue-chive'),
             btnQAudit: document.getElementById('btn-queue-audit')
         };
 
-        // --- Core Functions ---
-
         function init() {
             state.reports = JSON.parse(localStorage.getItem('job_reports') || '[]');
             const limits = JSON.parse(localStorage.getItem('job_limits') || '{}');
             state.chiveLimit = limits.chive || 20;
             state.auditLimit = limits.audit || 15;
-            state.syncUrl = localStorage.getItem('job_sync_url') || '';
             
-            const rateData = JSON.parse(localStorage.getItem('job_exchange_rate') || '{}');
-            if (rateData.rate) { state.exchangeRate = rateData.rate; state.lastRateUpdate = rateData.date; }
-
             els.inputChiveLimit.value = state.chiveLimit;
             els.inputAuditLimit.value = state.auditLimit;
-            els.inputSyncUrl.value = state.syncUrl;
+            els.cloudUrlInfo.innerText = CLOUD_URL || "Chưa cấu hình URL trong Code";
             
             updateDateDisplay();
             fetchRate();
             render();
             lucide.createIcons();
             
-            if (state.syncUrl) syncFromCloud();
+            if (CLOUD_URL) {
+                syncFromCloud();
+            } else {
+                updateCloudStatus('error', 'Thiếu URL trong Code');
+            }
 
-            // Auto-refresh check every 60s
+            // Tự động kiểm tra dữ liệu mỗi 30s
             setInterval(() => {
                 checkNewDay();
-                if (state.syncUrl && !state.isSyncing) syncFromCloud();
-            }, 60000);
+                if (CLOUD_URL && !state.isSyncing) syncFromCloud();
+            }, 30000);
+
+            // Đồng bộ khi quay lại tab (Focus)
+            window.addEventListener('focus', () => {
+                if (CLOUD_URL && !state.isSyncing) syncFromCloud();
+            });
         }
 
         function checkNewDay() {
             const now = new Date().getDate();
-            if (now !== state.lastDate) {
-                window.location.reload(); // Tự động refresh khi qua ngày mới
-            }
+            if (now !== state.lastDate) window.location.reload();
         }
 
         function updateDateDisplay() {
@@ -271,7 +274,7 @@
 
         function updateCloudStatus(type, text) {
             els.statusText.innerText = text;
-            els.cloudStatus.className = 'w-2 h-2 rounded-full ' + (
+            els.cloudStatus.className = 'w-2.5 h-2.5 rounded-full ' + (
                 type === 'syncing' ? 'bg-yellow-400 syncing' : 
                 type === 'success' ? 'bg-emerald-500' : 
                 type === 'error' ? 'bg-red-500' : 'bg-slate-300'
@@ -285,46 +288,45 @@
                 if (data?.rates?.VND) {
                     state.exchangeRate = data.rates.VND;
                     state.lastRateUpdate = new Date().toLocaleDateString('vi-VN');
-                    localStorage.setItem('job_exchange_rate', JSON.stringify({ rate: state.exchangeRate, date: state.lastRateUpdate }));
                     render();
                 }
             } catch (e) {}
         }
 
         async function syncToCloud() {
-            if (!state.syncUrl) return;
+            if (!CLOUD_URL) return;
             state.isSyncing = true;
-            updateCloudStatus('syncing', 'Đang lưu Cloud...');
+            updateCloudStatus('syncing', 'Đang lưu...');
             try {
-                await fetch(state.syncUrl, {
+                await fetch(CLOUD_URL, {
                     method: 'POST',
                     mode: 'no-cors',
                     cache: 'no-cache',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(state.reports)
                 });
-                updateCloudStatus('success', 'Đã lưu lên Cloud');
+                updateCloudStatus('success', 'Đã lưu Cloud');
             } catch (e) { 
-                updateCloudStatus('error', 'Lỗi lưu Cloud');
+                updateCloudStatus('error', 'Lỗi lưu');
             }
             state.isSyncing = false;
         }
 
         async function syncFromCloud() {
-            if (!state.syncUrl) return;
+            if (!CLOUD_URL) return;
             state.isSyncing = true;
-            updateCloudStatus('syncing', 'Đang cập nhật...');
+            updateCloudStatus('syncing', 'Đang tải...');
             try {
-                const res = await fetch(state.syncUrl);
+                const res = await fetch(CLOUD_URL);
                 const data = await res.json();
                 if (Array.isArray(data)) {
                     state.reports = data;
                     localStorage.setItem('job_reports', JSON.stringify(state.reports));
                     render();
-                    updateCloudStatus('success', 'Cloud đã đồng bộ');
+                    updateCloudStatus('success', 'Đã đồng bộ');
                 }
             } catch (e) { 
-                updateCloudStatus('error', 'Lỗi tải Cloud');
+                updateCloudStatus('error', 'Lỗi tải');
             }
             state.isSyncing = false;
         }
@@ -370,11 +372,8 @@
             els.recordCount.innerText = `${state.reports.length} bản ghi`;
             els.footerInfo.innerText = `© 2026 Job Report Pro • Tỷ giá cập nhật ${state.lastRateUpdate}: ${state.exchangeRate.toLocaleString()} VNĐ`;
 
-            // Render List with direct onclick
-            if (state.reports.length === 0) {
-                els.reportsList.innerHTML = '<div class="p-12 text-center text-slate-400 italic">Chưa có báo cáo nào.</div>';
-            } else {
-                els.reportsList.innerHTML = state.reports.map(r => `
+            els.reportsList.innerHTML = state.reports.length === 0 ? '<div class="p-12 text-center text-slate-400 italic">Chưa có báo cáo nào.</div>' : 
+                state.reports.map(r => `
                     <div class="p-5 hover:bg-slate-50 transition-colors group flex items-start justify-between gap-4">
                         <div class="flex gap-4">
                             <div class="mt-1 w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold ${r.jobType === 'GDO' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}">${r.jobType[0]}</div>
@@ -396,15 +395,11 @@
                         </button>
                     </div>
                 `).join('');
-            }
             lucide.createIcons();
         }
 
-        // --- Event Handlers ---
-
-        // Sửa lỗi xóa bằng cách dùng hàm toàn cục cực kỳ đơn giản
         window.handleDelete = function(id) {
-            if (confirm("Bạn có chắc chắn muốn xóa báo cáo này?")) {
+            if (confirm("Xóa báo cáo này?")) {
                 state.reports = state.reports.filter(r => String(r.id) !== String(id));
                 localStorage.setItem('job_reports', JSON.stringify(state.reports));
                 render();
@@ -421,17 +416,7 @@
             const h = parseFloat(els.inputHours.value);
             if (!h || h <= 0) return;
             const rate = state.jobType === 'GDO' ? 3.6 : 2.0;
-            const newReport = { 
-                id: Date.now().toString(), 
-                date: new Date().toISOString(), 
-                jobType: state.jobType, 
-                queue: state.queue, 
-                hours: h, 
-                description: els.inputDesc.value, 
-                rate, 
-                totalUsd: h * rate 
-            };
-            state.reports = [newReport, ...state.reports];
+            state.reports = [{ id: Date.now().toString(), date: new Date().toISOString(), jobType: state.jobType, queue: state.queue, hours: h, description: els.inputDesc.value, rate, totalUsd: h * rate }, ...state.reports];
             localStorage.setItem('job_reports', JSON.stringify(state.reports));
             els.inputHours.value = ''; els.inputDesc.value = '';
             render();
@@ -441,12 +426,6 @@
         document.getElementById('toggle-settings').onclick = () => els.settingsPanel.classList.toggle('hidden');
         document.getElementById('close-settings').onclick = () => els.settingsPanel.classList.add('hidden');
         
-        els.inputSyncUrl.onchange = (e) => {
-            state.syncUrl = e.target.value.trim();
-            localStorage.setItem('job_sync_url', state.syncUrl);
-            if (state.syncUrl) syncFromCloud();
-        };
-
         els.inputChiveLimit.oninput = (e) => { state.chiveLimit = parseFloat(e.target.value) || 20; localStorage.setItem('job_limits', JSON.stringify({ chive: state.chiveLimit, audit: state.auditLimit })); render(); };
         els.inputAuditLimit.oninput = (e) => { state.auditLimit = parseFloat(e.target.value) || 15; localStorage.setItem('job_limits', JSON.stringify({ chive: state.chiveLimit, audit: state.auditLimit })); render(); };
 
