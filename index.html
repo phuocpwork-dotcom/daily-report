@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Job Report Pro - Fixed & Auto Sync</title>
+    <title>Job Report Pro - Ultimate Sync</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -13,7 +13,7 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
         .fade-in { animation: fadeIn 0.3s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        .syncing { animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .syncing { animation: pulse 1.5s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
         .job-active { border-color: #4f46e5 !important; background-color: #eef2ff !important; color: #4338ca !important; }
         .job-inactive { border-color: #f1f5f9 !important; background-color: #f8fafc !important; color: #94a3b8 !important; }
@@ -52,7 +52,7 @@
                 <div class="space-y-4">
                     <div>
                         <label class="text-xs font-bold text-slate-500 block mb-1 uppercase">Google Web App URL</label>
-                        <input id="input-sync-url" type="text" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500">
+                        <input id="input-sync-url" type="text" placeholder="Dán URL Apps Script vào đây..." class="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 outline-none">
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
@@ -185,6 +185,7 @@
     </div>
 
     <script>
+        // Global State
         let state = {
             reports: [],
             jobType: 'GDO',
@@ -194,7 +195,8 @@
             chiveLimit: 20,
             auditLimit: 15,
             syncUrl: '',
-            isSyncing: false
+            isSyncing: false,
+            lastDate: new Date().getDate()
         };
 
         const els = {
@@ -226,6 +228,8 @@
             btnQAudit: document.getElementById('btn-queue-audit')
         };
 
+        // --- Core Functions ---
+
         function init() {
             state.reports = JSON.parse(localStorage.getItem('job_reports') || '[]');
             const limits = JSON.parse(localStorage.getItem('job_limits') || '{}');
@@ -239,17 +243,30 @@
             els.inputChiveLimit.value = state.chiveLimit;
             els.inputAuditLimit.value = state.auditLimit;
             els.inputSyncUrl.value = state.syncUrl;
-            els.currentDate.innerText = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'numeric' });
-
+            
+            updateDateDisplay();
             fetchRate();
             render();
             lucide.createIcons();
             
             if (state.syncUrl) syncFromCloud();
 
+            // Auto-refresh check every 60s
             setInterval(() => {
+                checkNewDay();
                 if (state.syncUrl && !state.isSyncing) syncFromCloud();
             }, 60000);
+        }
+
+        function checkNewDay() {
+            const now = new Date().getDate();
+            if (now !== state.lastDate) {
+                window.location.reload(); // Tự động refresh khi qua ngày mới
+            }
+        }
+
+        function updateDateDisplay() {
+            els.currentDate.innerText = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'numeric' });
         }
 
         function updateCloudStatus(type, text) {
@@ -313,7 +330,6 @@
         }
 
         function render() {
-            // Update Stats
             const today = new Date().toISOString().split('T')[0];
             const todayReports = state.reports.filter(r => r.date.startsWith(today));
             const gdoUsd = todayReports.filter(r => r.jobType === 'GDO').reduce((s, r) => s + r.totalUsd, 0);
@@ -325,7 +341,6 @@
             els.chiveUsd.innerText = `$${chiveUsd.toFixed(2)}`;
             els.chiveVnd.innerText = `≈ ${(chiveUsd * state.exchangeRate).toLocaleString('vi-VN')} đ`;
 
-            // Update Progress
             const startOfWeek = new Date();
             startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + (startOfWeek.getDay() === 0 ? -6 : 1));
             startOfWeek.setHours(0,0,0,0);
@@ -341,7 +356,6 @@
             els.auditProgressBar.style.width = `${Math.min((auHrs/state.auditLimit)*100, 100)}%`;
             els.auditProgressBar.className = `h-full rounded-full transition-all ${auHrs >= state.auditLimit ? 'bg-red-500' : 'bg-purple-500'}`;
 
-            // Update Form Button Styles
             els.btnGdo.className = `job-btn py-3 px-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-1 ${state.jobType === 'GDO' ? 'job-active' : 'job-inactive'}`;
             els.btnChive.className = `job-btn py-3 px-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-1 ${state.jobType === 'Chive' ? 'job-active' : 'job-inactive'}`;
             
@@ -353,12 +367,14 @@
                 els.queueSection.classList.add('hidden');
             }
 
-            // Update List
             els.recordCount.innerText = `${state.reports.length} bản ghi`;
             els.footerInfo.innerText = `© 2026 Job Report Pro • Tỷ giá cập nhật ${state.lastRateUpdate}: ${state.exchangeRate.toLocaleString()} VNĐ`;
 
-            els.reportsList.innerHTML = state.reports.length === 0 ? '<div class="p-12 text-center text-slate-400 italic">Chưa có báo cáo nào.</div>' : 
-                state.reports.map(r => `
+            // Render List with direct onclick
+            if (state.reports.length === 0) {
+                els.reportsList.innerHTML = '<div class="p-12 text-center text-slate-400 italic">Chưa có báo cáo nào.</div>';
+            } else {
+                els.reportsList.innerHTML = state.reports.map(r => `
                     <div class="p-5 hover:bg-slate-50 transition-colors group flex items-start justify-between gap-4">
                         <div class="flex gap-4">
                             <div class="mt-1 w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold ${r.jobType === 'GDO' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}">${r.jobType[0]}</div>
@@ -375,16 +391,21 @@
                                 </div>
                             </div>
                         </div>
-                        <button onclick="window.deleteReport('${r.id}')" class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        <button onclick="handleDelete('${r.id}')" class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-100 lg:opacity-0 group-hover:opacity-100 transition-all">
+                            <i data-lucide="trash-2" class="w-4 h-4 pointer-events-none"></i>
+                        </button>
                     </div>
                 `).join('');
+            }
             lucide.createIcons();
         }
 
-        // Global Delete Function
-        window.deleteReport = (id) => {
-            if (confirm("Xóa báo cáo này?")) {
-                state.reports = state.reports.filter(r => r.id !== id);
+        // --- Event Handlers ---
+
+        // Sửa lỗi xóa bằng cách dùng hàm toàn cục cực kỳ đơn giản
+        window.handleDelete = function(id) {
+            if (confirm("Bạn có chắc chắn muốn xóa báo cáo này?")) {
+                state.reports = state.reports.filter(r => String(r.id) !== String(id));
                 localStorage.setItem('job_reports', JSON.stringify(state.reports));
                 render();
                 syncToCloud();
@@ -400,7 +421,17 @@
             const h = parseFloat(els.inputHours.value);
             if (!h || h <= 0) return;
             const rate = state.jobType === 'GDO' ? 3.6 : 2.0;
-            state.reports = [{ id: Date.now().toString(), date: new Date().toISOString(), jobType: state.jobType, queue: state.queue, hours: h, description: els.inputDesc.value, rate, totalUsd: h * rate }, ...state.reports];
+            const newReport = { 
+                id: Date.now().toString(), 
+                date: new Date().toISOString(), 
+                jobType: state.jobType, 
+                queue: state.queue, 
+                hours: h, 
+                description: els.inputDesc.value, 
+                rate, 
+                totalUsd: h * rate 
+            };
+            state.reports = [newReport, ...state.reports];
             localStorage.setItem('job_reports', JSON.stringify(state.reports));
             els.inputHours.value = ''; els.inputDesc.value = '';
             render();
@@ -411,7 +442,7 @@
         document.getElementById('close-settings').onclick = () => els.settingsPanel.classList.add('hidden');
         
         els.inputSyncUrl.onchange = (e) => {
-            state.syncUrl = e.target.value;
+            state.syncUrl = e.target.value.trim();
             localStorage.setItem('job_sync_url', state.syncUrl);
             if (state.syncUrl) syncFromCloud();
         };
