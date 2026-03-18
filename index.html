@@ -3,197 +3,321 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Job Report Pro - Zero Touch Sync</title>
+    <title>Job Report Pro - Vivid Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        .syncing { animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
-        .job-active { border-color: #4f46e5 !important; background-color: #eef2ff !important; color: #4338ca !important; }
-        .job-inactive { border-color: #f1f5f9 !important; background-color: #f8fafc !important; color: #94a3b8 !important; }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #a855f7;
+            --bg: #f1f5f9;
+        }
+
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            min-height: 100vh;
+        }
+
+        @keyframes pulse-scale {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .animate-pulse-scale { animation: pulse-scale 0.3s ease-out; }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.1);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-up { animation: slideUp 0.4s ease-out forwards; }
+
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+            70% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+        }
+        .status-glow { animation: pulse-glow 2s infinite; }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+
+        .daily-goal-ring {
+            transition: stroke-dashoffset 1s ease-in-out;
+        }
+
+        .job-active { 
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important;
+            color: white !important;
+            border: none !important;
+            box-shadow: 0 8px 20px -4px rgba(99, 102, 241, 0.4);
+            transform: scale(1.02);
+        }
+        .job-inactive { 
+            background: white !important;
+            color: #64748b !important;
+            border: 1px solid #e2e8f0 !important;
+        }
     </style>
 </head>
-<body>
-    <div class="min-h-screen p-4 md:p-8">
-        <div class="max-w-4xl mx-auto space-y-6">
+<body class="p-4 md:p-8">
+    <div class="max-w-5xl mx-auto space-y-8">
+        
+        <!-- Header Section -->
+        <header class="flex flex-col md:flex-row md:items-center justify-between gap-6 animate-slide-up">
+            <div class="space-y-1">
+                <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+                    Job Report Pro
+                </h1>
+                <div class="flex items-center gap-3">
+                    <div id="cloud-status" class="w-3 h-3 rounded-full bg-slate-300 transition-all duration-500"></div>
+                    <p id="status-text" class="text-slate-500 text-[11px] font-extrabold uppercase tracking-[0.2em]">Khởi tạo hệ thống...</p>
+                </div>
+            </div>
             
-            <!-- Header -->
-            <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                <div>
-                    <h1 class="text-3xl font-bold tracking-tight text-slate-900">Job Report Pro</h1>
-                    <div class="flex items-center gap-2 mt-1">
-                        <div id="cloud-status" class="w-2.5 h-2.5 rounded-full bg-slate-300"></div>
-                        <p id="status-text" class="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Đang khởi tạo...</p>
+            <div class="flex items-center gap-3">
+                <div class="glass px-5 py-3 rounded-2xl shadow-sm flex items-center gap-3 border-white/50">
+                    <div class="p-2 bg-indigo-500/10 rounded-lg">
+                        <i data-lucide="calendar" class="w-5 h-5 text-indigo-600"></i>
+                    </div>
+                    <span id="current-date" class="text-sm font-bold text-slate-700">...</span>
+                </div>
+                <div class="glass px-4 py-2 sm:px-5 sm:py-3 rounded-2xl shadow-sm flex items-center gap-3 border-white/50">
+                    <div class="relative w-7 h-7 sm:w-8 sm:h-8">
+                        <svg class="w-full h-full" viewBox="0 0 36 36">
+                            <path class="text-slate-200" stroke-width="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            <path id="goal-ring" class="text-indigo-600 daily-goal-ring" stroke-width="3" stroke-dasharray="0, 100" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center text-[7px] sm:text-[8px] font-black text-indigo-600" id="goal-percent">0%</div>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[8px] sm:text-[9px] font-black text-slate-400 uppercase tracking-tighter">Mục tiêu</span>
+                        <span id="goal-status" class="text-[9px] sm:text-[10px] font-bold text-slate-700">$0 / $10</span>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
-                    <div class="bg-white px-4 py-2 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-2">
-                        <i data-lucide="calendar" class="w-4 h-4 text-indigo-600"></i>
-                        <span id="current-date" class="text-sm font-bold text-slate-700">...</span>
-                    </div>
-                    <button id="toggle-settings" class="p-2.5 bg-white hover:bg-slate-50 rounded-2xl shadow-sm border border-slate-200 transition-all text-slate-400">
-                        <i data-lucide="settings" class="w-5 h-5"></i>
-                    </button>
-                </div>
-            </header>
+                <button id="toggle-settings" class="p-3.5 bg-white hover:bg-slate-50 rounded-2xl shadow-sm border border-slate-200 transition-all active:scale-90 text-slate-400">
+                    <i data-lucide="settings-2" class="w-6 h-6"></i>
+                </button>
+            </div>
+        </header>
 
-            <!-- Settings Panel -->
-            <div id="settings-panel" class="hidden bg-white p-6 rounded-3xl shadow-xl border border-slate-200 space-y-4 fade-in">
-                <div class="flex items-center justify-between border-b pb-4">
-                    <h3 class="font-bold text-slate-800">Cấu hình hệ thống</h3>
-                    <button id="close-settings" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
+        <!-- Settings Panel -->
+        <div id="settings-panel" class="hidden glass p-8 rounded-[2rem] shadow-2xl border border-white/40 space-y-6 animate-slide-up relative z-50">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-4">
+                <h3 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
+                    <i data-lucide="sliders" class="w-5 h-5 text-indigo-600"></i> Cấu hình hệ thống
+                </h3>
+                <button id="close-settings" class="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-4">
                     <div>
-                        <label class="text-[10px] font-bold text-slate-400 block mb-1 uppercase">Chive Max (Giờ)</label>
-                        <input id="input-chive-limit" type="number" class="w-full px-4 py-2 text-sm border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
+                        <label class="text-[11px] font-extrabold text-slate-400 block mb-2 uppercase tracking-wider">Chive Max (Giờ/Tuần)</label>
+                        <input id="input-chive-limit" type="number" class="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
                     </div>
                     <div>
-                        <label class="text-[10px] font-bold text-slate-400 block mb-1 uppercase">Audit Max (Giờ)</label>
-                        <input id="input-audit-limit" type="number" class="w-full px-4 py-2 text-sm border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500">
+                        <label class="text-[11px] font-extrabold text-slate-400 block mb-2 uppercase tracking-wider">Audit Max (Giờ/Tuần)</label>
+                        <input id="input-audit-limit" type="number" class="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
                     </div>
                 </div>
-                <div class="p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
-                    <p class="text-[10px] text-indigo-600 font-bold uppercase mb-1">Trạng thái Cloud</p>
-                    <p id="cloud-url-info" class="text-xs text-indigo-900 break-all font-medium">Chưa cấu hình URL trong Code</p>
-                </div>
-                <button id="btn-clear-data" class="w-full py-3 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold uppercase rounded-xl transition-colors">Xóa toàn bộ dữ liệu</button>
-            </div>
-
-            <!-- Stats Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 md:col-span-2 fade-in">
-                    <div class="flex items-center justify-between mb-6">
-                        <div class="flex items-center gap-3">
-                            <div class="p-2 bg-emerald-50 rounded-xl"><i data-lucide="dollar-sign" class="w-5 h-5 text-emerald-600"></i></div>
-                            <span class="text-sm font-medium text-slate-500 uppercase tracking-wider">Thu nhập hôm nay</span>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-sm text-slate-400">Tổng cộng</div>
-                            <div id="total-usd-today" class="text-xl font-bold text-slate-900">$0.00</div>
-                        </div>
+                <div class="bg-indigo-600/5 p-6 rounded-3xl border border-indigo-100 flex flex-col justify-center">
+                    <div class="flex items-center gap-2 mb-2">
+                        <i data-lucide="link" class="w-4 h-4 text-indigo-600"></i>
+                        <span class="text-[11px] text-indigo-600 font-extrabold uppercase tracking-wider">Cloud Endpoint</span>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div class="p-4 bg-blue-50/50 rounded-2xl border border-blue-100">
-                            <div class="text-xs font-bold text-blue-600 uppercase mb-1">Job GDO</div>
-                            <div id="gdo-usd" class="text-2xl font-bold text-slate-900">$0.00</div>
-                            <div id="gdo-vnd" class="text-sm font-medium text-blue-600">≈ 0 đ</div>
-                        </div>
-                        <div class="p-4 bg-purple-50/50 rounded-2xl border border-purple-100">
-                            <div class="text-xs font-bold text-purple-600 uppercase mb-1">Job Chive</div>
-                            <div id="chive-usd" class="text-2xl font-bold text-slate-900">$0.00</div>
-                            <div id="chive-vnd" class="text-sm font-medium text-purple-600">≈ 0 đ</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 fade-in" style="animation-delay: 0.1s">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="p-2 bg-indigo-50 rounded-xl"><i data-lucide="trending-up" class="w-5 h-5 text-indigo-600"></i></div>
-                        <span class="text-sm font-medium text-slate-500 uppercase tracking-wider">Tiến độ tuần</span>
-                    </div>
-                    <div class="space-y-5">
-                        <div class="space-y-2">
-                            <div class="flex justify-between text-xs font-bold">
-                                <span class="text-slate-600 uppercase">Chive Queue</span>
-                                <span id="chive-progress-text" class="text-slate-900">0 / 20h</span>
-                            </div>
-                            <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                                <div id="chive-progress-bar" class="h-full bg-indigo-500 rounded-full transition-all duration-500" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        <div class="space-y-2">
-                            <div class="flex justify-between text-xs font-bold">
-                                <span class="text-slate-600 uppercase">Audit Queue</span>
-                                <span id="audit-progress-text" class="text-slate-900">0 / 15h</span>
-                            </div>
-                            <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                                <div id="audit-progress-bar" class="h-full bg-purple-500 rounded-full transition-all duration-500" style="width: 0%"></div>
-                            </div>
-                        </div>
-                    </div>
+                    <p id="cloud-url-info" class="text-xs text-indigo-900 break-all font-semibold leading-relaxed">Chưa cấu hình URL</p>
                 </div>
             </div>
-
-            <!-- Main Content -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div class="lg:col-span-5">
-                    <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 sticky top-8 fade-in" style="animation-delay: 0.2s">
-                        <h2 class="text-xl font-bold mb-6 flex items-center gap-2"><i data-lucide="plus-circle" class="w-5 h-5 text-indigo-600"></i> Thêm báo cáo</h2>
-                        <div class="space-y-5">
-                            <div>
-                                <label class="block text-sm font-semibold text-slate-700 mb-2">Chọn Job</label>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <button id="btn-job-gdo" class="job-btn py-3 px-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-1">
-                                        <span class="font-bold">GDO</span>
-                                        <span class="text-[10px] uppercase opacity-70">$3.6/h</span>
-                                    </button>
-                                    <button id="btn-job-chive" class="job-btn py-3 px-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-1">
-                                        <span class="font-bold">Chive</span>
-                                        <span class="text-[10px] uppercase opacity-70">$2.0/h</span>
-                                    </button>
-                                </div>
-                            </div>
-                            <div id="queue-section" class="hidden space-y-2">
-                                <label class="block text-sm font-semibold text-slate-700">Chọn Queue</label>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <button id="btn-queue-chive" class="queue-btn py-2 px-3 rounded-xl border transition-all text-sm font-medium">Chive</button>
-                                    <button id="btn-queue-audit" class="queue-btn py-2 px-3 rounded-xl border transition-all text-sm font-medium">Audit</button>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-slate-700 mb-2">Số giờ</label>
-                                <div class="relative">
-                                    <input id="input-hours" type="number" step="0.1" placeholder="2.5" class="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none">
-                                    <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">giờ</span>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-slate-700 mb-2">Nội dung</label>
-                                <textarea id="input-desc" placeholder="Task đã làm..." rows="3" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none resize-none"></textarea>
-                            </div>
-                            <button id="btn-submit" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-lg transition-all active:scale-[0.98]">Thêm báo cáo</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="lg:col-span-7">
-                    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden fade-in" style="animation-delay: 0.3s">
-                        <div class="p-6 border-b border-slate-100 flex items-center justify-between">
-                            <h2 class="text-xl font-bold flex items-center gap-2"><i data-lucide="briefcase" class="w-5 h-5 text-indigo-600"></i> Danh sách</h2>
-                            <span id="record-count" class="text-xs font-bold bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full uppercase">0 bản ghi</span>
-                        </div>
-                        <div id="reports-list" class="divide-y divide-slate-50 max-h-[600px] overflow-y-auto custom-scrollbar">
-                            <div class="p-12 text-center text-slate-400 font-medium italic">Chưa có báo cáo nào.</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <footer class="pt-8 pb-4 text-center text-slate-400 text-[10px] font-bold uppercase tracking-widest">
-                <p id="footer-info">© 2026 Job Report Pro • Tỷ giá: 26,320 VNĐ</p>
-            </footer>
+            <button id="btn-clear-data" class="w-full py-4 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-extrabold uppercase rounded-2xl transition-all active:scale-[0.98]">Xóa toàn bộ dữ liệu cục bộ</button>
         </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Income Card -->
+            <div class="glass p-8 rounded-[2.5rem] shadow-sm border-white/50 lg:col-span-2 card-hover animate-slide-up" style="animation-delay: 0.1s">
+                <div class="flex items-center justify-between mb-8">
+                    <div class="flex items-center gap-4">
+                        <div class="p-4 bg-emerald-500/10 rounded-2xl"><i data-lucide="wallet" class="w-6 h-6 text-emerald-600"></i></div>
+                        <div>
+                            <span class="text-[11px] font-extrabold text-slate-400 uppercase tracking-[0.2em]">Thu nhập hôm nay</span>
+                            <div id="total-usd-today" class="text-3xl font-extrabold text-slate-900">$0.00</div>
+                        </div>
+                    </div>
+                    <div class="text-right hidden sm:block">
+                        <div class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Tỷ giá hiện tại</div>
+                        <div class="text-sm font-bold text-indigo-600">1$ = 25,500 đ</div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div class="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl border border-blue-100/50 group">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-[10px] font-extrabold text-blue-600 uppercase tracking-widest">Job GDO</span>
+                            <i data-lucide="arrow-up-right" class="w-4 h-4 text-blue-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"></i>
+                        </div>
+                        <div id="gdo-usd" class="text-3xl font-extrabold text-slate-900 mb-1">$0.00</div>
+                        <div id="gdo-vnd" class="text-sm font-bold text-blue-600/80">≈ 0 đ</div>
+                    </div>
+                    <div class="p-6 bg-gradient-to-br from-purple-50 to-fuchsia-50 rounded-3xl border border-purple-100/50 group">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-[10px] font-extrabold text-purple-600 uppercase tracking-widest">Job Chive</span>
+                            <i data-lucide="arrow-up-right" class="w-4 h-4 text-purple-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"></i>
+                        </div>
+                        <div id="chive-usd" class="text-3xl font-extrabold text-slate-900 mb-1">$0.00</div>
+                        <div id="chive-vnd" class="text-sm font-bold text-purple-600/80">≈ 0 đ</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Card -->
+            <div class="glass p-8 rounded-[2.5rem] shadow-sm border-white/50 card-hover animate-slide-up" style="animation-delay: 0.2s">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="p-4 bg-indigo-500/10 rounded-2xl"><i data-lucide="bar-chart-3" class="w-6 h-6 text-indigo-600"></i></div>
+                    <span class="text-[11px] font-extrabold text-slate-400 uppercase tracking-[0.2em]">Tiến độ tuần</span>
+                </div>
+                <div class="space-y-8">
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-end">
+                            <span class="text-xs font-extrabold text-slate-600 uppercase tracking-widest">Chive Queue</span>
+                            <span id="chive-progress-text" class="text-sm font-black text-slate-900">0 / 20h</span>
+                        </div>
+                        <div class="w-full bg-slate-200/50 h-3 rounded-full overflow-hidden p-0.5">
+                            <div id="chive-progress-bar" class="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all duration-1000 shadow-[0_0_12px_rgba(99,102,241,0.4)]" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-end">
+                            <span class="text-xs font-extrabold text-slate-600 uppercase tracking-widest">Audit Queue</span>
+                            <span id="audit-progress-text" class="text-sm font-black text-slate-900">0 / 15h</span>
+                        </div>
+                        <div class="w-full bg-slate-200/50 h-3 rounded-full overflow-hidden p-0.5">
+                            <div id="audit-progress-bar" class="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full transition-all duration-1000 shadow-[0_0_12px_rgba(168,85,247,0.4)]" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Interaction Area -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Form Section -->
+            <div class="lg:col-span-5">
+                <div class="glass p-8 rounded-[2.5rem] shadow-sm border-white/50 sticky top-8 animate-slide-up" style="animation-delay: 0.3s">
+                    <h2 class="text-2xl font-extrabold mb-8 flex items-center gap-3 text-slate-800">
+                        <i data-lucide="plus-circle" class="w-7 h-7 text-indigo-600"></i> Thêm báo cáo
+                    </h2>
+                    <div class="space-y-6">
+                        <div class="space-y-3">
+                            <label class="block text-xs font-extrabold text-slate-500 uppercase tracking-widest">Loại công việc</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button id="btn-job-gdo" class="job-btn py-4 px-4 rounded-2xl font-extrabold text-sm transition-all active:scale-95 flex flex-col items-center gap-1">
+                                    <span>GDO</span>
+                                    <span class="text-[9px] uppercase opacity-60">$3.6/h</span>
+                                </button>
+                                <button id="btn-job-chive" class="job-btn py-4 px-4 rounded-2xl font-extrabold text-sm transition-all active:scale-95 flex flex-col items-center gap-1">
+                                    <span>CHIVE</span>
+                                    <span class="text-[9px] uppercase opacity-60">$2.0/h</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="queue-section" class="hidden space-y-3 animate-slide-up">
+                            <label class="block text-xs font-extrabold text-slate-500 uppercase tracking-widest">Chọn Queue</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <button id="btn-queue-chive" class="queue-btn py-3 px-3 rounded-xl font-bold text-xs transition-all active:scale-95 border">Chive</button>
+                                <button id="btn-queue-audit" class="queue-btn py-3 px-3 rounded-xl font-bold text-xs transition-all active:scale-95 border">Audit</button>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <label class="block text-xs font-extrabold text-slate-500 uppercase tracking-widest">Thời gian làm</label>
+                            <div class="relative group">
+                                <input id="input-hours" type="number" step="0.1" placeholder="Ví dụ: 2.5" class="w-full pl-6 pr-16 py-4 bg-white/50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-bold text-lg">
+                                <span class="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 font-extrabold text-sm uppercase">Giờ</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <label class="block text-xs font-extrabold text-slate-500 uppercase tracking-widest">Ghi chú công việc</label>
+                            <textarea id="input-desc" placeholder="Bạn đã làm những gì?..." rows="3" class="w-full px-6 py-4 bg-white/50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium text-sm resize-none"></textarea>
+                        </div>
+
+                        <button id="btn-submit" class="w-full py-5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-black text-sm uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-indigo-200 transition-all active:scale-[0.97] flex items-center justify-center gap-3">
+                            <i data-lucide="send" class="w-5 h-5"></i> Gửi báo cáo
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- List Section -->
+            <div class="lg:col-span-7">
+                <div class="glass rounded-[2.5rem] shadow-sm border-white/50 overflow-hidden animate-slide-up" style="animation-delay: 0.4s">
+                    <div class="p-8 border-b border-slate-100 flex items-center justify-between bg-white/30">
+                        <h2 class="text-2xl font-extrabold flex items-center gap-3 text-slate-800">
+                            <i data-lucide="list-checks" class="w-7 h-7 text-indigo-600"></i> Nhật ký Job
+                        </h2>
+                        <span id="record-count" class="text-[10px] font-black bg-indigo-600 text-white px-3 py-1.5 rounded-full uppercase tracking-widest shadow-lg shadow-indigo-200">0 Items</span>
+                    </div>
+                    <div id="reports-list" class="divide-y divide-slate-100 max-h-[700px] overflow-y-auto custom-scrollbar">
+                        <div class="p-20 text-center space-y-4">
+                            <div class="inline-flex p-6 bg-slate-50 rounded-full text-slate-300">
+                                <i data-lucide="ghost" class="w-12 h-12"></i>
+                            </div>
+                            <p class="text-slate-400 font-bold uppercase tracking-widest text-xs">Danh sách đang trống</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="pt-12 pb-8 text-center space-y-2">
+            <p id="footer-info" class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">© 2026 Job Report Pro • Vivid Edition</p>
+            <div class="flex justify-center gap-4 opacity-30">
+                <div class="w-8 h-1 bg-indigo-600 rounded-full"></div>
+                <div class="w-8 h-1 bg-purple-600 rounded-full"></div>
+                <div class="w-8 h-1 bg-emerald-600 rounded-full"></div>
+            </div>
+        </footer>
     </div>
 
     <script>
         // ==========================================
         // DÁN URL GOOGLE APPS SCRIPT CỦA BẠN VÀO ĐÂY
         // ==========================================
-        const CLOUD_URL = 'https://script.google.com/macros/s/AKfycbyMCZwqIw7BQhhIVDAzkZYyWikqDcirpvU4lgcSgwkFs1gS6fOaskgDIYSf1EAzP1PFXQ/exec'; 
+        const CLOUD_URL = ''; 
         // ==========================================
 
         let state = {
             reports: [],
             jobType: 'GDO',
             queue: 'None',
-            exchangeRate: 26320,
+            exchangeRate: 25500, // Đã đổi thành 25500 theo yêu cầu
             lastRateUpdate: '18/03/2026',
             chiveLimit: 20,
             auditLimit: 15,
@@ -241,23 +365,20 @@
             els.cloudUrlInfo.innerText = CLOUD_URL || "Chưa cấu hình URL trong Code";
             
             updateDateDisplay();
-            fetchRate();
             render();
             lucide.createIcons();
             
             if (CLOUD_URL) {
                 syncFromCloud();
             } else {
-                updateCloudStatus('error', 'Thiếu URL trong Code');
+                updateCloudStatus('error', 'Thiếu URL');
             }
 
-            // Tự động kiểm tra dữ liệu mỗi 30s
             setInterval(() => {
                 checkNewDay();
                 if (CLOUD_URL && !state.isSyncing) syncFromCloud();
             }, 30000);
 
-            // Đồng bộ khi quay lại tab (Focus)
             window.addEventListener('focus', () => {
                 if (CLOUD_URL && !state.isSyncing) syncFromCloud();
             });
@@ -274,23 +395,11 @@
 
         function updateCloudStatus(type, text) {
             els.statusText.innerText = text;
-            els.cloudStatus.className = 'w-2.5 h-2.5 rounded-full ' + (
-                type === 'syncing' ? 'bg-yellow-400 syncing' : 
-                type === 'success' ? 'bg-emerald-500' : 
-                type === 'error' ? 'bg-red-500' : 'bg-slate-300'
+            els.cloudStatus.className = 'w-3 h-3 rounded-full transition-all duration-500 ' + (
+                type === 'syncing' ? 'bg-yellow-400 status-glow' : 
+                type === 'success' ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]' : 
+                type === 'error' ? 'bg-red-500 shadow-[0_0_12px_rgba(239,68,68,0.5)]' : 'bg-slate-300'
             );
-        }
-
-        async function fetchRate() {
-            try {
-                const res = await fetch('https://open.er-api.com/v6/latest/USD');
-                const data = await res.json();
-                if (data?.rates?.VND) {
-                    state.exchangeRate = data.rates.VND;
-                    state.lastRateUpdate = new Date().toLocaleDateString('vi-VN');
-                    render();
-                }
-            } catch (e) {}
         }
 
         async function syncToCloud() {
@@ -305,7 +414,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(state.reports)
                 });
-                updateCloudStatus('success', 'Đã lưu Cloud');
+                updateCloudStatus('success', 'Đã lưu');
             } catch (e) { 
                 updateCloudStatus('error', 'Lỗi lưu');
             }
@@ -323,7 +432,7 @@
                     state.reports = data;
                     localStorage.setItem('job_reports', JSON.stringify(state.reports));
                     render();
-                    updateCloudStatus('success', 'Đã đồng bộ');
+                    updateCloudStatus('success', 'Đồng bộ OK');
                 }
             } catch (e) { 
                 updateCloudStatus('error', 'Lỗi tải');
@@ -336,8 +445,15 @@
             const todayReports = state.reports.filter(r => r.date.startsWith(today));
             const gdoUsd = todayReports.filter(r => r.jobType === 'GDO').reduce((s, r) => s + r.totalUsd, 0);
             const chiveUsd = todayReports.filter(r => r.jobType === 'Chive').reduce((s, r) => s + r.totalUsd, 0);
+            const totalToday = gdoUsd + chiveUsd;
             
-            els.totalUsdToday.innerText = `$${(gdoUsd + chiveUsd).toFixed(2)}`;
+            // Pulse effect if value changed
+            if (els.totalUsdToday.innerText !== `$${totalToday.toFixed(2)}`) {
+                els.totalUsdToday.classList.add('animate-pulse-scale');
+                setTimeout(() => els.totalUsdToday.classList.remove('animate-pulse-scale'), 300);
+            }
+
+            els.totalUsdToday.innerText = `$${totalToday.toFixed(2)}`;
             els.gdoUsd.innerText = `$${gdoUsd.toFixed(2)}`;
             els.gdoVnd.innerText = `≈ ${(gdoUsd * state.exchangeRate).toLocaleString('vi-VN')} đ`;
             els.chiveUsd.innerText = `$${chiveUsd.toFixed(2)}`;
@@ -352,54 +468,71 @@
 
             els.chiveProgressText.innerText = `${chHrs.toFixed(1)} / ${state.chiveLimit}h`;
             els.chiveProgressBar.style.width = `${Math.min((chHrs/state.chiveLimit)*100, 100)}%`;
-            els.chiveProgressBar.className = `h-full rounded-full transition-all ${chHrs >= state.chiveLimit ? 'bg-red-500' : 'bg-indigo-500'}`;
             
             els.auditProgressText.innerText = `${auHrs.toFixed(1)} / ${state.auditLimit}h`;
             els.auditProgressBar.style.width = `${Math.min((auHrs/state.auditLimit)*100, 100)}%`;
-            els.auditProgressBar.className = `h-full rounded-full transition-all ${auHrs >= state.auditLimit ? 'bg-red-500' : 'bg-purple-500'}`;
 
-            els.btnGdo.className = `job-btn py-3 px-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-1 ${state.jobType === 'GDO' ? 'job-active' : 'job-inactive'}`;
-            els.btnChive.className = `job-btn py-3 px-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-1 ${state.jobType === 'Chive' ? 'job-active' : 'job-inactive'}`;
+            els.btnGdo.className = `job-btn py-4 px-4 rounded-2xl font-extrabold text-sm transition-all active:scale-95 flex flex-col items-center gap-1 ${state.jobType === 'GDO' ? 'job-active' : 'job-inactive'}`;
+            els.btnChive.className = `job-btn py-4 px-4 rounded-2xl font-extrabold text-sm transition-all active:scale-95 flex flex-col items-center gap-1 ${state.jobType === 'Chive' ? 'job-active' : 'job-inactive'}`;
             
             if (state.jobType === 'Chive') {
                 els.queueSection.classList.remove('hidden');
-                els.btnQChive.className = `queue-btn py-2 px-3 rounded-xl border transition-all text-sm font-medium ${state.queue === 'Chive' ? 'border-indigo-400 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-500'}`;
-                els.btnQAudit.className = `queue-btn py-2 px-3 rounded-xl border transition-all text-sm font-medium ${state.queue === 'Audit' ? 'border-indigo-400 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-500'}`;
+                els.btnQChive.className = `queue-btn py-3 px-3 rounded-xl font-bold text-xs transition-all active:scale-95 border ${state.queue === 'Chive' ? 'border-indigo-400 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-500'}`;
+                els.btnQAudit.className = `queue-btn py-3 px-3 rounded-xl font-bold text-xs transition-all active:scale-95 border ${state.queue === 'Audit' ? 'border-indigo-400 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-500'}`;
             } else {
                 els.queueSection.classList.add('hidden');
             }
 
-            els.recordCount.innerText = `${state.reports.length} bản ghi`;
-            els.footerInfo.innerText = `© 2026 Job Report Pro • Tỷ giá cập nhật ${state.lastRateUpdate}: ${state.exchangeRate.toLocaleString()} VNĐ`;
+            els.recordCount.innerText = `${state.reports.length} Items`;
+            els.footerInfo.innerText = `© 2026 Job Report Pro • Tỷ giá: ${state.exchangeRate.toLocaleString()} VNĐ`;
 
-            els.reportsList.innerHTML = state.reports.length === 0 ? '<div class="p-12 text-center text-slate-400 italic">Chưa có báo cáo nào.</div>' : 
-                state.reports.map(r => `
-                    <div class="p-5 hover:bg-slate-50 transition-colors group flex items-start justify-between gap-4">
-                        <div class="flex gap-4">
-                            <div class="mt-1 w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold ${r.jobType === 'GDO' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}">${r.jobType[0]}</div>
-                            <div class="space-y-1">
-                                <div class="flex items-center gap-2">
-                                    <span class="font-bold text-slate-900">${r.jobType}</span>
-                                    ${r.queue !== 'None' ? `<span class="text-[10px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase">${r.queue}</span>` : ''}
-                                    <span class="text-xs text-slate-400">• ${new Date(r.date).toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'})}</span>
+            // Update Daily Goal
+            const dailyGoal = 10; // Mục tiêu $10 mỗi ngày
+            const percent = Math.min((totalToday / dailyGoal) * 100, 100);
+            const ring = document.getElementById('goal-ring');
+            if (ring) ring.setAttribute('stroke-dasharray', `${percent}, 100`);
+            const goalPercent = document.getElementById('goal-percent');
+            if (goalPercent) goalPercent.innerText = `${Math.round(percent)}%`;
+            const goalStatus = document.getElementById('goal-status');
+            if (goalStatus) goalStatus.innerText = `$${totalToday.toFixed(1)} / $${dailyGoal}`;
+
+            if (state.reports.length === 0) {
+                els.reportsList.innerHTML = `
+                    <div class="p-20 text-center space-y-4">
+                        <div class="inline-flex p-6 bg-slate-50 rounded-full text-slate-300">
+                            <i data-lucide="ghost" class="w-12 h-12"></i>
+                        </div>
+                        <p class="text-slate-400 font-bold uppercase tracking-widest text-xs">Danh sách đang trống</p>
+                    </div>`;
+            } else {
+                els.reportsList.innerHTML = state.reports.map(r => `
+                    <div class="p-6 hover:bg-indigo-50/30 transition-all group flex items-start justify-between gap-4 animate-slide-up">
+                        <div class="flex gap-5">
+                            <div class="mt-1 w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 font-black text-lg shadow-sm ${r.jobType === 'GDO' ? 'bg-blue-500 text-white' : 'bg-purple-500 text-white'}">${r.jobType[0]}</div>
+                            <div class="space-y-1.5">
+                                <div class="flex items-center gap-3">
+                                    <span class="font-black text-slate-900 tracking-tight">${r.jobType}</span>
+                                    ${r.queue !== 'None' ? `<span class="text-[9px] font-black bg-slate-900 text-white px-2 py-0.5 rounded-md uppercase tracking-tighter">${r.queue}</span>` : ''}
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">${new Date(r.date).toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'})}</span>
                                 </div>
-                                <p class="text-sm text-slate-600">${r.description || '...'}</p>
-                                <div class="flex items-center gap-3 pt-1">
-                                    <div class="flex items-center gap-1 text-xs font-bold text-slate-500"><i data-lucide="clock" class="w-3.5 h-3.5"></i>${r.hours}h</div>
-                                    <div class="flex items-center gap-1 text-xs font-bold text-emerald-600"><i data-lucide="dollar-sign" class="w-3.5 h-3.5"></i>$${r.totalUsd.toFixed(2)}</div>
+                                <p class="text-sm text-slate-500 font-medium leading-relaxed">${r.description || 'Không có ghi chú'}</p>
+                                <div class="flex items-center gap-4 pt-1">
+                                    <div class="flex items-center gap-1.5 text-xs font-black text-slate-400"><i data-lucide="clock" class="w-3.5 h-3.5"></i>${r.hours}H</div>
+                                    <div class="flex items-center gap-1.5 text-xs font-black text-emerald-500"><i data-lucide="dollar-sign" class="w-3.5 h-3.5"></i>$${r.totalUsd.toFixed(2)}</div>
                                 </div>
                             </div>
                         </div>
-                        <button onclick="handleDelete('${r.id}')" class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-100 lg:opacity-0 group-hover:opacity-100 transition-all">
-                            <i data-lucide="trash-2" class="w-4 h-4 pointer-events-none"></i>
+                        <button onclick="window.handleDelete('${r.id}')" class="p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-2xl opacity-100 lg:opacity-0 group-hover:opacity-100 transition-all active:scale-90">
+                            <i data-lucide="trash-2" class="w-5 h-5"></i>
                         </button>
                     </div>
                 `).join('');
+            }
             lucide.createIcons();
         }
 
         window.handleDelete = function(id) {
-            if (confirm("Xóa báo cáo này?")) {
+            if (confirm("Bạn có chắc chắn muốn xóa báo cáo này?")) {
                 state.reports = state.reports.filter(r => String(r.id) !== String(id));
                 localStorage.setItem('job_reports', JSON.stringify(state.reports));
                 render();
@@ -416,9 +549,28 @@
             const h = parseFloat(els.inputHours.value);
             if (!h || h <= 0) return;
             const rate = state.jobType === 'GDO' ? 3.6 : 2.0;
-            state.reports = [{ id: Date.now().toString(), date: new Date().toISOString(), jobType: state.jobType, queue: state.queue, hours: h, description: els.inputDesc.value, rate, totalUsd: h * rate }, ...state.reports];
+            const newReport = { 
+                id: Date.now().toString(), 
+                date: new Date().toISOString(), 
+                jobType: state.jobType, 
+                queue: state.queue, 
+                hours: h, 
+                description: els.inputDesc.value, 
+                rate, 
+                totalUsd: h * rate 
+            };
+            state.reports = [newReport, ...state.reports];
             localStorage.setItem('job_reports', JSON.stringify(state.reports));
             els.inputHours.value = ''; els.inputDesc.value = '';
+            
+            // Confetti Effect
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#6366f1', '#a855f7', '#10b981']
+            });
+
             render();
             syncToCloud();
         };
