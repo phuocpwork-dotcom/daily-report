@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Job Report Pro - Cloud Sync</title>
+    <title>Job Report Pro - Auto Sync</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -13,8 +13,8 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
         .fade-in { animation: fadeIn 0.3s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        .sync-loading { animation: spin 1s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .syncing { animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
     </style>
 </head>
 <body>
@@ -25,19 +25,46 @@
             <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
                     <h1 class="text-3xl font-bold tracking-tight text-slate-900">Job Report Pro</h1>
-                    <p class="text-slate-500 mt-1">Đồng bộ Google Sheets (PC & Mobile)</p>
+                    <div class="flex items-center gap-2 mt-1">
+                        <div id="cloud-status" class="w-2 h-2 rounded-full bg-slate-300"></div>
+                        <p id="status-text" class="text-slate-500 text-xs font-medium uppercase tracking-wider">Chưa kết nối Cloud</p>
+                    </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button id="btn-sync" class="bg-white px-4 py-2 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-2 hover:bg-slate-50 transition-all">
-                        <i id="sync-icon" data-lucide="refresh-cw" class="w-4 h-4 text-indigo-600"></i>
-                        <span class="text-sm font-bold text-slate-700">Đồng bộ</span>
-                    </button>
                     <div class="bg-white px-4 py-2 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-2">
                         <i data-lucide="calendar" class="w-4 h-4 text-indigo-600"></i>
                         <span id="current-date" class="text-sm font-medium text-slate-700">...</span>
                     </div>
+                    <button id="toggle-settings" class="p-2.5 bg-white hover:bg-slate-50 rounded-2xl shadow-sm border border-slate-200 transition-all text-slate-400">
+                        <i data-lucide="settings" class="w-5 h-5"></i>
+                    </button>
                 </div>
             </header>
+
+            <!-- Settings Panel (Cài đặt 1 lần) -->
+            <div id="settings-panel" class="hidden bg-white p-6 rounded-3xl shadow-md border border-slate-200 space-y-4 fade-in">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-bold text-slate-800">Cấu hình đồng bộ tự động</h3>
+                    <button id="close-settings" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-xs font-bold text-slate-500 block mb-1 uppercase">Google Web App URL (Dán vào đây để tự động hóa)</label>
+                        <input id="input-sync-url" type="text" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs font-bold text-slate-500 block mb-1 uppercase">Chive Max (Tuần)</label>
+                            <input id="input-chive-limit" type="number" class="w-full px-4 py-2 text-sm border border-slate-200 rounded-xl outline-none">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-500 block mb-1 uppercase">Audit Max (Tuần)</label>
+                            <input id="input-audit-limit" type="number" class="w-full px-4 py-2 text-sm border border-slate-200 rounded-xl outline-none">
+                        </div>
+                    </div>
+                    <button id="btn-clear-data" class="w-full py-3 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold uppercase rounded-xl transition-colors">Xóa toàn bộ dữ liệu</button>
+                </div>
+            </div>
 
             <!-- Stats Grid -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -67,34 +94,10 @@
                 </div>
 
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 fade-in" style="animation-delay: 0.1s">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="flex items-center gap-3">
-                            <div class="p-2 bg-indigo-50 rounded-xl"><i data-lucide="trending-up" class="w-5 h-5 text-indigo-600"></i></div>
-                            <span class="text-sm font-medium text-slate-500 uppercase tracking-wider">Tiến độ tuần</span>
-                        </div>
-                        <button id="toggle-settings" class="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400">
-                            <i data-lucide="settings" class="w-4 h-4"></i>
-                        </button>
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="p-2 bg-indigo-50 rounded-xl"><i data-lucide="trending-up" class="w-5 h-5 text-indigo-600"></i></div>
+                        <span class="text-sm font-medium text-slate-500 uppercase tracking-wider">Tiến độ tuần</span>
                     </div>
-
-                    <div id="settings-panel" class="hidden mb-4 p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
-                        <div>
-                            <label class="text-[10px] font-bold text-slate-400 block mb-1 uppercase">Google Web App URL</label>
-                            <input id="input-sync-url" type="text" placeholder="https://script.google.com/..." class="w-full px-2 py-1.5 text-[10px] border rounded bg-white outline-none">
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 block mb-1 uppercase">Chive Max</label>
-                                <input id="input-chive-limit" type="number" class="w-full px-2 py-1 text-sm border rounded bg-white outline-none">
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 block mb-1 uppercase">Audit Max</label>
-                                <input id="input-audit-limit" type="number" class="w-full px-2 py-1 text-sm border rounded bg-white outline-none">
-                            </div>
-                        </div>
-                        <button id="btn-clear-data" class="w-full py-2 bg-red-50 hover:bg-red-100 text-red-600 text-[10px] font-bold uppercase rounded-lg transition-colors">Xóa dữ liệu</button>
-                    </div>
-
                     <div class="space-y-5">
                         <div class="space-y-2">
                             <div class="flex justify-between text-xs font-bold">
@@ -155,7 +158,7 @@
                                 <label class="block text-sm font-semibold text-slate-700 mb-2">Nội dung</label>
                                 <textarea id="input-desc" placeholder="Task đã làm..." rows="3" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none resize-none"></textarea>
                             </div>
-                            <button id="btn-submit" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-lg transition-all">Thêm báo cáo</button>
+                            <button id="btn-submit" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-lg transition-all active:scale-[0.98]">Thêm báo cáo</button>
                         </div>
                     </div>
                 </div>
@@ -188,7 +191,8 @@
             lastRateUpdate: '18/03/2026',
             chiveLimit: 20,
             auditLimit: 15,
-            syncUrl: 'https://script.google.com/macros/s/AKfycbxw-vX9A7aV5l3uSb5QTXUqrZzA1wdhHxqQ0o335IlUABGquvzi3qGx78eHj2AF5OvWiA/exec'
+            syncUrl: '',
+            isSyncing: false
         };
 
         const els = {
@@ -212,8 +216,8 @@
             inputSyncUrl: document.getElementById('input-sync-url'),
             settingsPanel: document.getElementById('settings-panel'),
             queueSection: document.getElementById('queue-section'),
-            btnSync: document.getElementById('btn-sync'),
-            syncIcon: document.getElementById('sync-icon')
+            cloudStatus: document.getElementById('cloud-status'),
+            statusText: document.getElementById('status-text')
         };
 
         function init() {
@@ -235,8 +239,25 @@
             render();
             lucide.createIcons();
             
-            // Tự động đồng bộ khi mở app nếu có URL
-            if (state.syncUrl) syncFromCloud();
+            // Tự động đồng bộ ngay khi mở app
+            if (state.syncUrl) {
+                updateCloudStatus('syncing', 'Đang kết nối Cloud...');
+                syncFromCloud();
+            }
+
+            // Tự động kiểm tra dữ liệu mới mỗi 60 giây
+            setInterval(() => {
+                if (state.syncUrl && !state.isSyncing) syncFromCloud();
+            }, 60000);
+        }
+
+        function updateCloudStatus(type, text) {
+            els.statusText.innerText = text;
+            els.cloudStatus.className = 'w-2 h-2 rounded-full ' + (
+                type === 'syncing' ? 'bg-yellow-400 syncing' : 
+                type === 'success' ? 'bg-emerald-500' : 
+                type === 'error' ? 'bg-red-500' : 'bg-slate-300'
+            );
         }
 
         async function fetchRate() {
@@ -254,7 +275,8 @@
 
         async function syncToCloud() {
             if (!state.syncUrl) return;
-            els.syncIcon.classList.add('sync-loading');
+            state.isSyncing = true;
+            updateCloudStatus('syncing', 'Đang lưu Cloud...');
             try {
                 await fetch(state.syncUrl, {
                     method: 'POST',
@@ -263,14 +285,18 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(state.reports)
                 });
-                console.log("Synced to cloud");
-            } catch (e) { console.error("Sync failed", e); }
-            setTimeout(() => els.syncIcon.classList.remove('sync-loading'), 1000);
+                updateCloudStatus('success', 'Đã lưu lên Cloud');
+            } catch (e) { 
+                updateCloudStatus('error', 'Lỗi lưu Cloud');
+                console.error("Sync failed", e); 
+            }
+            state.isSyncing = false;
         }
 
         async function syncFromCloud() {
             if (!state.syncUrl) return;
-            els.syncIcon.classList.add('sync-loading');
+            state.isSyncing = true;
+            updateCloudStatus('syncing', 'Đang cập nhật...');
             try {
                 const res = await fetch(state.syncUrl);
                 const data = await res.json();
@@ -278,9 +304,13 @@
                     state.reports = data;
                     localStorage.setItem('job_reports', JSON.stringify(state.reports));
                     render();
+                    updateCloudStatus('success', 'Cloud đã đồng bộ');
                 }
-            } catch (e) { console.error("Fetch failed", e); }
-            setTimeout(() => els.syncIcon.classList.remove('sync-loading'), 1000);
+            } catch (e) { 
+                updateCloudStatus('error', 'Lỗi tải Cloud');
+                console.error("Fetch failed", e); 
+            }
+            state.isSyncing = false;
         }
 
         function render() {
@@ -324,14 +354,14 @@
                                     ${r.queue !== 'None' ? `<span class="text-[10px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase">${r.queue}</span>` : ''}
                                     <span class="text-xs text-slate-400">• ${new Date(r.date).toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'})}</span>
                                 </div>
-                                <p class="text-sm text-slate-600">${r.description || 'Không có ghi chú'}</p>
+                                <p class="text-sm text-slate-600">${r.description || '...'}</p>
                                 <div class="flex items-center gap-3 pt-1">
                                     <div class="flex items-center gap-1 text-xs font-bold text-slate-500"><i data-lucide="clock" class="w-3.5 h-3.5"></i>${r.hours}h</div>
                                     <div class="flex items-center gap-1 text-xs font-bold text-emerald-600"><i data-lucide="dollar-sign" class="w-3.5 h-3.5"></i>$${r.totalUsd.toFixed(2)}</div>
                                 </div>
                             </div>
                         </div>
-                        <button onclick="window.deleteReport('${r.id}')" class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        <button onclick="deleteReport('${r.id}')" class="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                     </div>
                 `).join('');
             lucide.createIcons();
@@ -350,7 +380,7 @@
             localStorage.setItem('job_reports', JSON.stringify(state.reports));
             els.inputHours.value = ''; els.inputDesc.value = '';
             render();
-            syncToCloud();
+            syncToCloud(); // Tự động đẩy lên Cloud ngay khi thêm
         };
 
         window.deleteReport = (id) => {
@@ -358,22 +388,29 @@
                 state.reports = state.reports.filter(r => r.id !== id);
                 localStorage.setItem('job_reports', JSON.stringify(state.reports));
                 render();
-                syncToCloud();
+                syncToCloud(); // Tự động đẩy lên Cloud ngay khi xóa
             }
         };
 
         document.getElementById('toggle-settings').onclick = () => els.settingsPanel.classList.toggle('hidden');
-        els.btnSync.onclick = () => syncFromCloud();
+        document.getElementById('close-settings').onclick = () => els.settingsPanel.classList.add('hidden');
         
         els.inputSyncUrl.onchange = (e) => {
             state.syncUrl = e.target.value;
             localStorage.setItem('job_sync_url', state.syncUrl);
+            if (state.syncUrl) syncFromCloud();
         };
 
         els.inputChiveLimit.oninput = (e) => { state.chiveLimit = parseFloat(e.target.value) || 20; localStorage.setItem('job_limits', JSON.stringify({ chive: state.chiveLimit, audit: state.auditLimit })); render(); };
         els.inputAuditLimit.oninput = (e) => { state.auditLimit = parseFloat(e.target.value) || 15; localStorage.setItem('job_limits', JSON.stringify({ chive: state.chiveLimit, audit: state.auditLimit })); render(); };
-	
-	syncFromCloud();
+
+        document.getElementById('btn-clear-data').onclick = () => {
+            if (confirm("Xóa TOÀN BỘ dữ liệu?")) {
+                localStorage.clear();
+                window.location.reload();
+            }
+        };
+
         init();
     </script>
 </body>
